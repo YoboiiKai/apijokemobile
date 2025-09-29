@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const [jokeApiJoke, setJokeApiJoke] = useState<JokeApiResponse | null>(null);
   const [rapidClicks, setRapidClicks] = useState(0);
   const [showFunnyMessage, setShowFunnyMessage] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(false);
   const { addToHistory } = useJokeHistory();
@@ -72,6 +73,8 @@ export default function HomeScreen() {
     if (newClickCount >= 3) {
       console.log('Showing funny message');
       setShowFunnyMessage(true);
+      // Toggle between 0 and 1 for message index
+      setMessageIndex(prev => (prev + 1) % 2);
       // Hide message after 3 seconds
       setTimeout(() => {
         setShowFunnyMessage(false);
@@ -188,7 +191,9 @@ export default function HomeScreen() {
               style={styles.overlayImage}
               resizeMode="contain"
             />
-            <Text style={styles.overlayText}>Wait lang kupal kaba boss?</Text>
+            <Text style={styles.overlayText}>
+              {messageIndex === 0 ? 'WAIT LANG KUPAL KABA BOSS?' : 'WAIT LANG NGANI BOSS'}
+            </Text>
           </View>
         </View>
       )}
