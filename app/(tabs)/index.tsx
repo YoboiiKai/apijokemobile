@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useJokeHistory } from '@/contexts/JokeContext';
 import {
   View,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { RefreshCw } from 'lucide-react-native';
@@ -28,6 +29,9 @@ interface JokeApiResponse {
 export default function HomeScreen() {
   const [officialJoke, setOfficialJoke] = useState<OfficialJoke | null>(null);
   const [jokeApiJoke, setJokeApiJoke] = useState<JokeApiResponse | null>(null);
+  const [rapidClicks, setRapidClicks] = useState(0);
+  const [showFunnyMessage, setShowFunnyMessage] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(false);
   const { addToHistory } = useJokeHistory();
 
@@ -55,6 +59,34 @@ export default function HomeScreen() {
 
   const fetchAllJokes = async () => {
     setLoading(true);
+    
+    // Clear any existing timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    
+    // Increment click counter
+    const newClickCount = rapidClicks + 1;
+    console.log('Click count:', newClickCount);
+    
+    if (newClickCount >= 3) {
+      console.log('Showing funny message');
+      setShowFunnyMessage(true);
+      // Hide message after 3 seconds
+      setTimeout(() => {
+        setShowFunnyMessage(false);
+        console.log('Hiding funny message');
+      }, 3000);
+      setRapidClicks(0);
+    } else {
+      setRapidClicks(newClickCount);
+      // Reset counter after 1 second of no clicks
+      clickTimeoutRef.current = setTimeout(() => {
+        console.log('Resetting click counter');
+        setRapidClicks(0);
+      }, 1000);
+    }
+
     try {
       const [official, jokeApi] = await Promise.all([
         fetchOfficialJoke(),
@@ -95,23 +127,21 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    // Initial data fetch
     fetchAllJokes();
+    
+    // Cleanup function
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Daily Jokes</Text>
-        <Text style={styles.subtitle}>Double the laughs, double the fun! 😄</Text>
-      </View>
-
-      <ScrollView 
-        style={styles.content} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <JokeCard
           title="Official Joke"
           joke={officialJoke ? `${officialJoke.setup}\n\n${officialJoke.punchline}` : null}
@@ -148,6 +178,20 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      
+      {/* Loading Overlay */}
+      {showFunnyMessage && (
+        <View style={styles.overlay}>
+          <View style={styles.overlayContent}>
+            <Image 
+              source={require('@/assets/images/malupiton.png')} 
+              style={styles.overlayImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.overlayText}>Wait lang kupal kaba boss?</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -176,12 +220,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '500',
   },
-  content: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    flexGrow: 1,
+    padding: 16,
   },
   footer: {
     paddingHorizontal: 20,
@@ -204,6 +245,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  overlayContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '80%',
+  },
+  overlayImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 10,
+  },
+  overlayText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e3a8a',
+    textAlign: 'center',
   },
   refreshButtonText: {
     color: '#1e3a8a', // Navy blue
